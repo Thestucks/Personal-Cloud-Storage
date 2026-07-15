@@ -1,5 +1,7 @@
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAccounts } from '../hooks/useAccounts'
+import { api } from '../lib/api'
 
 function formatBytes(bytes) {
   if (bytes === 0) return '0 GB'
@@ -57,6 +59,25 @@ function AccountCard({ account }) {
 
 export default function Dashboard() {
   const { accounts, loading } = useAccounts()
+  const [usageMap, setUsageMap] = useState({})
+  const [usageLoading, setUsageLoading] = useState(false)
+  const [usageError, setUsageError] = useState('')
+
+  useEffect(() => {
+    if (accounts.length === 0) return
+    setUsageLoading(true)
+    setUsageError('')
+    Promise.all(accounts.map(a =>
+      api.getAccountUsage(a.id)
+        .then(u => ({ id: a.id, usage: u }))
+        .catch(() => null)
+    )).then(results => {
+      const map = {}
+      results.filter(Boolean).forEach(r => { map[r.id] = r.usage })
+      setUsageMap(map)
+      setUsageLoading(false)
+    })
+  }, [accounts])
 
   if (loading) {
     return (
@@ -66,8 +87,13 @@ export default function Dashboard() {
     )
   }
 
-  const totalUsed = accounts.reduce((s, a) => s + (a.usage?.used || 0), 0)
-  const totalFiles = accounts.reduce((s, a) => s + (a.usage?.files || 0), 0)
+  const accountsWithUsage = accounts.map(a => ({
+    ...a,
+    usage: usageMap[a.id] || a.usage || { used: 0, total: 10_737_418_240, files: 0 },
+  }))
+
+  const totalUsed = accountsWithUsage.reduce((s, a) => s + (a.usage.used || 0), 0)
+  const totalFiles = accountsWithUsage.reduce((s, a) => s + (a.usage.files || 0), 0)
 
   return (
     <div>
@@ -76,13 +102,14 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">
             {accounts.length} akun &middot; {formatBytes(totalUsed)} terpakai &middot; {totalFiles} file
+            {usageLoading && <span className="ml-2 text-xs text-gray-400">(memuat...)</span>}
           </p>
         </div>
         <Link to="/accounts" className="btn-primary">+ Tambah Akun</Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {accounts.map(acct => (
+        {accountsWithUsage.map(acct => (
           <AccountCard key={acct.id} account={acct} />
         ))}
       </div>

@@ -162,10 +162,10 @@ export const api = {
     return request('/api/shares')
   },
 
-  async createShareLink(fileId, expiresInDays = 7) {
-    return request(`/api/files/${fileId}/share`, {
+  async createShareLink(accountId, r2Key, filename, expiresInDays = 7) {
+    return request('/api/shares', {
       method: 'POST',
-      body: JSON.stringify({ expiresInDays }),
+      body: JSON.stringify({ account_id: accountId, r2_key: r2Key, filename, expiresInDays }),
     })
   },
 

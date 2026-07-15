@@ -403,60 +403,77 @@ export default {
       // ── Share routes ──
       if (url.pathname === '/api/shares' && request.method === 'GET') {
         const { results } = await env.DB.prepare(
-          `SELECT f.id, f.filename, f.share_token, f.share_created, f.share_expires,
+          `SELECT s.id, s.filename, s.token, s.created_at, s.expires, s.downloads,
                   sa.label as account_label
-           FROM files f JOIN storage_accounts sa ON f.account_id = sa.id
-           WHERE f.share_token IS NOT NULL
-           ORDER BY f.share_created DESC`
+           FROM share_links s JOIN storage_accounts sa ON s.account_id = sa.id
+           ORDER BY s.created_at DESC`
         ).all()
-        return json(results)
+        return json(results.map(r => ({
+          id: r.id,
+          filename: r.filename,
+          token: r.token,
+          account_label: r.account_label,
+          created_at: r.created_at,
+          expires: r.expires,
+          downloads: r.downloads || 0,
+        })))
       }
 
       // Create share link
-      const shareCreateMatch = match('/api/files/:id/share', url)
-      if (shareCreateMatch && request.method === 'POST') {
-        const { expiresInDays = 7 } = await request.json()
+      if (url.pathname.startsWith('/api/shares') && request.method === 'POST') {
+        const { account_id, r2_key, filename, expiresInDays = 7 } = await request.json()
+        if (!account_id || !r2_key || !filename) return error('Missing required fields')
         const token = crypto.randomUUID().split('-').join('').substring(0, 12)
         const expires = new Date(Date.now() + expiresInDays * 86400000).toISOString()
-        // Files are stored in R2, not in DB. We create a share record.
+        const acct = await env.DB.prepare('SELECT id FROM storage_accounts WHERE id = ?').bind(account_id).first()
+        if (!acct) return error('Akun tidak ditemukan', 404)
         await env.DB.prepare(
-          'UPDATE files SET share_token = ?, share_created = ?, share_expires = ? WHERE id = ?'
-        ).bind(token, new Date().toISOString(), expires, shareCreateMatch.id).run()
-        return json({ token, expires })
+          'INSERT INTO share_links (account_id, filename, r2_key, token, expires) VALUES (?, ?, ?, ?, ?)'
+        ).bind(account_id, filename, r2_key, token, expires).run()
+        return json({ token, expires, filename })
       }
 
       // Delete share link
       const shareDeleteMatch = match('/api/shares/:id', url)
       if (shareDeleteMatch && request.method === 'DELETE') {
-        await env.DB.prepare('UPDATE files SET share_token = NULL, share_created = NULL, share_expires = NULL WHERE id = ?').bind(shareDeleteMatch.id).run()
+        await env.DB.prepare('DELETE FROM share_links WHERE id = ?').bind(shareDeleteMatch.id).run()
         return json({ success: true })
       }
 
       // Public access to shared file
       const publicShareMatch = match('/api/share/:token', url)
       if (publicShareMatch && request.method === 'GET') {
-        const file = await env.DB.prepare(
-          'SELECT f.*, sa.account_id as acct_id, sa.bucket FROM files f JOIN storage_accounts sa ON f.account_id = sa.id WHERE f.share_token = ?'
-        ).bind(publicShareMatch.token).first()
-        if (!file) return error('File tidak ditemukan', 404)
-        if (file.share_expires && new Date(file.share_expires) < new Date()) {
+        const link = await env.DB.prepare('SELECT * FROM share_links WHERE token = ?').bind(publicShareMatch.token).first()
+        if (!link) return error('File tidak ditemukan', 404)
+        if (link.expires && new Date(link.expires) < new Date()) {
           return error('Link sudah kadaluwarsa', 410)
         }
 
-        const acct = await env.DB.prepare('SELECT * FROM storage_accounts WHERE id = ?').bind(file.account_id).first()
+        // Increment download count
+        await env.DB.prepare('UPDATE share_links SET downloads = downloads + 1 WHERE id = ?').bind(link.id).run()
+
+        const acct = await env.DB.prepare('SELECT * FROM storage_accounts WHERE id = ?').bind(link.account_id).first()
+        if (!acct) return error('Akun tidak ditemukan', 404)
         const encKey = new TextEncoder().encode(env.ENC_KEY)
         const apiToken = await decrypt(acct.api_token_encrypted, encKey)
         const [accessKeyId, secretAccessKey] = apiToken.split(':')
 
+        const ext = link.r2_key.includes('.') ? link.r2_key.split('.').pop().toLowerCase() : ''
+        const mimeMap = {
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+          webp: 'image/webp', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm',
+          mov: 'video/quicktime', pdf: 'application/pdf',
+        }
+
         const downloadUrl = await generatePresignedGetUrl({
-          accessKeyId, secretAccessKey, bucket: file.bucket,
-          accountId: file.acct_id, key: file.r2_key,
+          accessKeyId, secretAccessKey, bucket: acct.bucket,
+          accountId: acct.account_id, key: link.r2_key,
         })
 
         return json({
-          filename: file.filename,
-          size: file.size,
-          mime: file.mime,
+          filename: link.filename,
+          size: 0,
+          mime: mimeMap[ext] || 'application/octet-stream',
           downloadUrl,
         })
       }

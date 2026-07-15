@@ -22,7 +22,7 @@ export default function BrowsePage() {
 
   const handleShare = async (file) => {
     if (!file?.id) return
-    const link = await api.createShareLink(file.id, 7)
+    const link = await api.createShareLink(accountId, file.r2_key, file.filename, 7)
     alert(`Link berhasil dibuat:\n${window.location.origin}/#/share/${link.token}`)
   }
 
