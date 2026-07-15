@@ -35,6 +35,31 @@ export default {
     if (corsResp) return corsResp
 
     try {
+      // ── Debug endpoint (no auth required) ──
+      if (url.pathname === '/api/debug' && request.method === 'GET') {
+        const info = {
+          env: Object.keys(env),
+          hasDB: !!env.DB,
+          hasENC_KEY: !!env.ENC_KEY,
+          hasAUTH_PASSWORD: !!env.AUTH_PASSWORD,
+          hasAUTH_TOKEN_SECRET: !!env.AUTH_TOKEN_SECRET,
+        }
+        let d1Status = 'not_configured'
+        let d1Tables = []
+        if (env.DB) {
+          try {
+            const tables = await env.DB.prepare(
+              "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            ).all()
+            d1Status = 'ok'
+            d1Tables = tables.results || []
+          } catch (e) {
+            d1Status = `error: ${e.message}`
+          }
+        }
+        return json({ info, d1: { status: d1Status, tables: d1Tables } })
+      }
+
       // ── Auth routes ──
       if (url.pathname === '/api/auth/login' && request.method === 'POST') {
         const { password } = await request.json()
@@ -55,13 +80,15 @@ export default {
 
       // ── Account routes ──
       if (url.pathname === '/api/accounts' && request.method === 'GET') {
-        const { results } = await env.DB.prepare(
+        if (!env.DB) return error('D1 database not bound - check wrangler.toml binding', 500)
+        const stmt = env.DB.prepare(
           'SELECT id, label, account_id, bucket, folders, is_active, created_at FROM storage_accounts ORDER BY created_at DESC'
-        ).all()
-        return json(results.map(a => ({
+        )
+        const { results } = await stmt.all()
+        return json((results || []).map(a => ({
           ...a,
           is_active: !!a.is_active,
-          folders: JSON.parse(a.folders || '[]'),
+          folders: (() => { try { return JSON.parse(a.folders || '[]') } catch { return [] } })(),
         })))
       }
 
@@ -417,7 +444,7 @@ export default {
 
       return error('Not found', 404)
     } catch (e) {
-      return error(e.message, 500)
+      return error(e.message + (e.stack ? ' | ' + e.stack.split('\n').slice(0, 3).join(' ') : ''), 500)
     }
   }
 }

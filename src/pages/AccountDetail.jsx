@@ -29,9 +29,9 @@ export default function AccountDetail() {
     )
   }
 
-  const pct = account.usage.total > 0
-    ? Math.min((account.usage.used / account.usage.total) * 100, 100)
-    : 0
+  const usage = account.usage || { used: 0, total: 10_737_418_240, files: 0 }
+  const total = usage.total || 10_737_418_240
+  const pct = total > 0 ? Math.min((usage.used / total) * 100, 100) : 0
 
   return (
     <div>
@@ -55,8 +55,8 @@ export default function AccountDetail() {
 
           <div className="sm:w-56">
             <div className="flex justify-between text-sm text-gray-500 mb-1">
-              <span>{formatBytes(account.usage.used)}</span>
-              <span>{formatBytes(account.usage.total)}</span>
+              <span>{formatBytes(usage.used)}</span>
+              <span>{formatBytes(total)}</span>
             </div>
             <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
               <div
@@ -66,7 +66,7 @@ export default function AccountDetail() {
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400 text-right mt-1">{account.files} file</p>
+            <p className="text-xs text-gray-400 text-right mt-1">{usage.files || 0} file</p>
           </div>
         </div>
 

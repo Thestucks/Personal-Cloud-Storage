@@ -8,16 +8,16 @@ function formatBytes(bytes) {
 }
 
 function AccountCard({ account }) {
-  const pct = account.usage.total > 0
-    ? Math.min((account.usage.used / account.usage.total) * 100, 100)
-    : 0
+  const usage = account.usage || { used: 0, total: 10_737_418_240, files: 0 }
+  const total = usage.total || 10_737_418_240
+  const pct = total > 0 ? Math.min((usage.used / total) * 100, 100) : 0
 
   return (
     <Link to={`/accounts/${account.id}`} className="card p-5 hover:shadow-md transition-shadow block">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="font-semibold text-gray-900">{account.label}</h3>
-          <p className="text-xs text-gray-400 mt-0.5">{account.files} file</p>
+          <p className="text-xs text-gray-400 mt-0.5">{usage.files || 0} file</p>
         </div>
         <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">
           Aktif
@@ -27,7 +27,7 @@ function AccountCard({ account }) {
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs text-gray-500">
           <span>Storage</span>
-          <span>{formatBytes(account.usage.used)} / {formatBytes(account.usage.total)}</span>
+          <span>{formatBytes(usage.used)} / {formatBytes(total)}</span>
         </div>
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -66,8 +66,8 @@ export default function Dashboard() {
     )
   }
 
-  const totalUsed = accounts.reduce((s, a) => s + a.usage.used, 0)
-  const totalFiles = accounts.reduce((s, a) => s + a.usage.files, 0)
+  const totalUsed = accounts.reduce((s, a) => s + (a.usage?.used || 0), 0)
+  const totalFiles = accounts.reduce((s, a) => s + (a.usage?.files || 0), 0)
 
   return (
     <div>

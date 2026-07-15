@@ -6,7 +6,7 @@ compatibility_date = "2025-04-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "cloudstorage-db"
-database_id = ""
+database_id = "fe133e13-6362-411a-9bbf-68f0302b3ace"
 
 # R2 Bucket bindings (NOTE: used for direct access, but we use S3 API for dynamic accounts)
 # Uncomment and set if you prefer using R2 bindings
