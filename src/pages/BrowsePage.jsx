@@ -20,19 +20,22 @@ export default function BrowsePage() {
   const { files, loading: filesLoading, refetch } = useFiles(accountId, folder)
   const [previewFile, setPreviewFile] = useState(null)
 
-  const handleDelete = async (file) => {
-    if (!confirm(`Hapus "${file.filename}"?`)) return
-    await api.deleteFile(file.id, accountId, file.r2_key)
-    refetch()
-  }
-
   const handleShare = async (file) => {
+    if (!file?.id) return
     const link = await api.createShareLink(file.id, 7)
     alert(`Link berhasil dibuat:\n${window.location.origin}/#/share/${link.token}`)
   }
 
   const handleRename = async (file, newName) => {
-    await api.renameFile(accountId, file.id, newName)
+    if (!file?.id) return
+    await api.renameFile(accountId, file.id, newName, file.r2_key)
+    refetch()
+  }
+
+  const handleDelete = async (file) => {
+    if (!file?.id) return
+    if (!confirm(`Hapus "${file.filename}"?`)) return
+    await api.deleteFile(file.id, accountId, file.r2_key)
     refetch()
   }
 

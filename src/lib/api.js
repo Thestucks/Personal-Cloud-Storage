@@ -146,10 +146,10 @@ export const api = {
     })
   },
 
-  async renameFile(accountId, fileId, newName) {
+  async renameFile(accountId, fileId, newName, oldKey) {
     return request(`/api/files/${fileId}/rename`, {
       method: 'PUT',
-      body: JSON.stringify({ newName, account_id: accountId }),
+      body: JSON.stringify({ newName, account_id: accountId, oldKey }),
     })
   },
 

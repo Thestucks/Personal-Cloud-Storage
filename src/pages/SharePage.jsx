@@ -25,6 +25,7 @@ export default function SharePage() {
   useEffect(() => { fetchLinks() }, [])
 
   const handleDelete = async (id) => {
+    if (id == null) return
     if (!confirm('Hapus share link? File tetap ada.')) return
     await api.deleteShareLink(id)
     fetchLinks()

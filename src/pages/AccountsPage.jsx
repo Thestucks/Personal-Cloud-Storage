@@ -16,12 +16,14 @@ export default function AccountsPage() {
   const [testing, setTesting] = useState(null)
 
   const handleDelete = async (id) => {
+    if (id == null) return
     if (!confirm('Hapus akun ini? File tidak bisa dikembalikan.')) return
     await api.deleteAccount(id)
     refetch()
   }
 
   const handleTest = async (acct) => {
+    if (!acct?.id) return
     setTesting(acct.id)
     try {
       const res = await api.testConnection({ id: acct.id })
