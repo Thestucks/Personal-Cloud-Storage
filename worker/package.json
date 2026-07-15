@@ -1,0 +1,15 @@
+{
+  "name": "cloudstorage-worker",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply --remote",
+    "db:local": "wrangler d1 migrations apply --local"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

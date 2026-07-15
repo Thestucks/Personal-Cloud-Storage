@@ -1,0 +1,23 @@
+name = "cloudstorage-api"
+main = "src/index.js"
+compatibility_date = "2025-04-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "cloudstorage-db"
+database_id = ""
+
+# R2 Bucket bindings (NOTE: used for direct access, but we use S3 API for dynamic accounts)
+# Uncomment and set if you prefer using R2 bindings
+# [[r2_buckets]]
+# binding = "R2"
+# bucket_name = "media-kerjaan"
+
+# Environment variables for secrets:
+# AUTH_PASSWORD - password untuk login
+# AUTH_TOKEN_SECRET - secret untuk JWT
+# ENC_KEY - key untuk enkripsi API token (32 bytes, hex-encoded)
+
+[vars]
+NODE_VERSION = "18"
