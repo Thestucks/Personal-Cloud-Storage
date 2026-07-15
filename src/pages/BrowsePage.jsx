@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useAccount } from '../hooks/useAccounts'
 import { useFiles } from '../hooks/useFiles'
