@@ -29,10 +29,16 @@ async function hmac(data, secret) {
 }
 
 // ─── Encryption (AES-GCM) for R2 API Tokens ───
+async function normalizeKey(raw) {
+  const hash = await crypto.subtle.digest('SHA-256', raw)
+  return hash
+}
+
 export async function encrypt(text, encKey) {
   const iv = crypto.getRandomValues(new Uint8Array(12))
+  const normalized = await normalizeKey(encKey)
   const key = await crypto.subtle.importKey(
-    'raw', encKey, { name: 'AES-GCM' }, false, ['encrypt']
+    'raw', normalized, { name: 'AES-GCM' }, false, ['encrypt']
   )
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
@@ -49,8 +55,9 @@ export async function decrypt(cipherB64, encKey) {
   const combined = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0))
   const iv = combined.slice(0, 12)
   const data = combined.slice(12)
+  const normalized = await normalizeKey(encKey)
   const key = await crypto.subtle.importKey(
-    'raw', encKey, { name: 'AES-GCM' }, false, ['decrypt']
+    'raw', normalized, { name: 'AES-GCM' }, false, ['decrypt']
   )
   const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data)
   return new TextDecoder().decode(decrypted)
