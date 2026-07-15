@@ -333,6 +333,25 @@ export default {
         return json({ uploadUrl, publicUrl })
       }
 
+      // Presigned URL for preview
+      const previewMatch = match('/api/accounts/:id/preview-url', url)
+      if (previewMatch && request.method === 'GET') {
+        const key = url.searchParams.get('key')
+        if (!key) return error('Missing key parameter')
+        const acct = await env.DB.prepare('SELECT * FROM storage_accounts WHERE id = ?').bind(previewMatch.id).first()
+        if (!acct) return error('Akun tidak ditemukan', 404)
+        const encKey = new TextEncoder().encode(env.ENC_KEY)
+        const apiToken = await decrypt(acct.api_token_encrypted, encKey)
+        const [accessKeyId, secretAccessKey] = apiToken.split(':')
+
+        const previewUrl = await generatePresignedGetUrl({
+          accessKeyId, secretAccessKey, bucket: acct.bucket,
+          accountId: acct.account_id, key,
+        })
+
+        return json({ previewUrl })
+      }
+
       // Delete file
       if (url.pathname.startsWith('/api/files/') && request.method === 'DELETE') {
         const parts = url.pathname.split('/')

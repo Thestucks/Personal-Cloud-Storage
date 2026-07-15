@@ -117,16 +117,23 @@ export default function BrowsePage() {
 }
 
 function PreviewModal({ file, onClose }) {
+  const { accountId } = useParams()
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
   const isImage = file.mime?.startsWith('image/')
   const isVideo = file.mime?.startsWith('video/')
   const isPdf = file.mime === 'application/pdf'
   const isText = file.mime?.startsWith('text/')
 
-  const previewUrl = isImage
-    ? `https://picsum.photos/seed/${file.id}/800/600`
-    : isVideo
-    ? 'https://www.w3schools.com/html/mov_bbb.mp4'
-    : null
+  useEffect(() => {
+    if (!file?.r2_key || !accountId) return
+    setLoading(true)
+    api.getPreviewUrl(accountId, file.r2_key)
+      .then(res => { setPreviewUrl(res.previewUrl); setLoading(false) })
+      .catch(e => { setError(e.message); setLoading(false) })
+  }, [file?.r2_key, accountId])
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -136,38 +143,37 @@ function PreviewModal({ file, onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
         <div className="p-4">
-          {isImage && previewUrl && (
+          {loading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+            </div>
+          )}
+          {error && (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-5xl mb-3">⚠️</p>
+              <p>Gagal memuat preview: {error}</p>
+            </div>
+          )}
+          {!loading && !error && isImage && previewUrl && (
             <img src={previewUrl} alt={file.filename} className="w-full rounded-lg" />
           )}
-          {isVideo && previewUrl && (
-            <video controls className="w-full rounded-lg" poster={`https://picsum.photos/seed/${file.id}/800/450`}>
-              <source src={previewUrl} type="video/mp4" />
+          {!loading && !error && isVideo && previewUrl && (
+            <video controls className="w-full rounded-lg" poster={previewUrl}>
+              <source src={previewUrl} type={file.mime} />
             </video>
           )}
-          {isPdf && (
-            <iframe
-              src="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-              className="w-full h-[70vh] rounded-lg"
-              title={file.filename}
-            />
+          {!loading && !error && isPdf && previewUrl && (
+            <iframe src={previewUrl} className="w-full h-[70vh] rounded-lg" title={file.filename} />
           )}
-          {isText && (
+          {!loading && !error && isText && (
             <pre className="bg-gray-50 p-4 rounded-lg text-sm overflow-auto max-h-[60vh]">
-              {`Contoh isi file ${file.filename}\n\nLorem ipsum dolor sit amet...\nBaris 1\nBaris 2\nBaris 3`}
+              {`Isi file ${file.filename}\n(Langsung download untuk membaca)`}
             </pre>
           )}
-          {!isImage && !isVideo && !isPdf && !isText && (
+          {!loading && !isImage && !isVideo && !isPdf && !isText && (
             <div className="text-center py-12 text-gray-400">
               <p className="text-5xl mb-3">📄</p>
               <p>Preview tidak tersedia untuk tipe file ini</p>
-              <a
-                href="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary mt-4 inline-block"
-              >
-                Download
-              </a>
             </div>
           )}
         </div>

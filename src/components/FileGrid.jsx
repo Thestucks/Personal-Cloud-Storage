@@ -51,7 +51,6 @@ export default function FileGrid({ files, onPreview, onDelete, onShare, onRename
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {files.map(file => {
-        const isImage = file.mime?.startsWith('image/')
         const isVideo = file.mime?.startsWith('video/')
 
         return (
@@ -61,26 +60,13 @@ export default function FileGrid({ files, onPreview, onDelete, onShare, onRename
             onClick={() => onPreview?.(file)}
           >
             {/* Thumbnail */}
-            <div className="aspect-video bg-gray-100 relative overflow-hidden">
-              {isImage ? (
-                <img
-                  src={`https://picsum.photos/seed/${file.id}/400/225`}
-                  alt={file.filename}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : isVideo ? (
-                <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                  <span className="text-4xl opacity-60">🎬</span>
-                  <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                    {formatSize(file.size)}
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                  <span className="text-4xl">{getFileIcon(file.mime, file.filename)}</span>
-                </div>
-              )}
+            <div className={`aspect-video relative overflow-hidden ${isVideo ? 'bg-gray-800' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-5xl">{getFileIcon(file.mime, file.filename)}</span>
+              </div>
+              <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+                {formatSize(file.size)}
+              </div>
             </div>
 
             {/* Info */}

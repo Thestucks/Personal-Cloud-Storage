@@ -146,6 +146,10 @@ export const api = {
     })
   },
 
+  async getPreviewUrl(accountId, key) {
+    return request(`/api/accounts/${accountId}/preview-url?key=${encodeURIComponent(key)}`)
+  },
+
   async renameFile(accountId, fileId, newName, oldKey) {
     return request(`/api/files/${fileId}/rename`, {
       method: 'PUT',
